@@ -353,9 +353,11 @@ class DataPuller:
         
         # match_limit=self._total_matching_pair // 2
         # total_profile_count=len(self._author_profiles_map.keys())
-        # unmatch_limit=(total_profile_count*total_profile_count) // 3
+        unmatch_limit=self._total_matching_pair * 5 
         # match_count=0
-        # unmatch_count=0
+        unmatch_count=0
+        
+        self._users_found_matching
         
         for row_index, row  in  enumerate(self._profile_matching_matrix):
             
@@ -366,21 +368,36 @@ class DataPuller:
                 
                 if row_index < col_index:
                     
-                    # if matching_label == True:
-                    #     match_count=match_count+1
+                    if matching_label == True :
+            
+                            # if matching_label == True:
+                            #     match_count=match_count+1
+                        
+                            # if matching_label == False:
+                            #     unmatch_count=unmatch_count+1
+                        
+                            
+                            self._pair_data_list.append(
+                                self._get_pair_data(self._author_profiles_map[row_index],
+                                                self._author_profiles_map[col_index], 
+                                                matching_label) 
+                                )
+                            
+                            print(row_index, col_index)
+                            print("added")
                 
-                    # if matching_label == False:
-                    #     unmatch_count=unmatch_count+1
-                
-                    
-                    self._pair_data_list.append(
-                        self._get_pair_data(self._author_profiles_map[row_index],
-                                        self._author_profiles_map[col_index], 
-                                        matching_label) 
-                        )
-                    
-                    print(row_index, col_index)
-                    print("added")
+                    else:
+                        if unmatch_count < unmatch_limit:
+                            unmatch_count=unmatch_count+1
+                            
+                            self._pair_data_list.append(
+                                self._get_pair_data(self._author_profiles_map[row_index],
+                                                self._author_profiles_map[col_index], 
+                                                matching_label) 
+                                )
+                            
+                            print(row_index, col_index)
+                            print("added in unmatch", unmatch_count)
                 
                 
                 
