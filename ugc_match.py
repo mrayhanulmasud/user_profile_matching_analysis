@@ -3,17 +3,25 @@
 """
 Created on Thu Dec  2 13:21:24 2021
 
-@author: masud
+@author:    Md Rayhanul Masud
+            University of California Riverside
 """
 
-# tokenize texts to get meaningful words
 from sklearn.feature_extraction.text import CountVectorizer
 from sentence_transformers import SentenceTransformer, util
 import pandas as pd
 import re
 from os.path import exists
-from model import Classifier
-
+from sklearn.utils import shuffle
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn import ensemble
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+from sklearn.metrics import plot_confusion_matrix
+import warnings
+warnings.filterwarnings('ignore')
 
 SUB_REDDIT_MAPPING = {
     'datascience': 1,
@@ -71,26 +79,7 @@ def textSimilarity(text1, text2): # get the similarity score.
     cosine_scores = util.pytorch_cos_sim(embeddings1,embeddings2)
     # cosine_scores
     return cosine_scores[0].item()
-
-def use_bag_of_vector(thread_list):
-    vectorizer = CountVectorizer()
-    vectorizer.fit(text)
     
-    # encode document
-    vector = vectorizer.transform(text)
-    
-    # summarize encoded vector
-    print(vector.shape)
-    
-    # print(type(vector))
-    
-    # print(vector.toarray())
-    
-    BoW_array = vector.toarray()
-    
-    print(BoW_array)
-    
-
 
 def get_clean_text(text):
     
@@ -410,7 +399,45 @@ class DataPuller:
         
         return self._pair_data_list
     
+def create_train_test_dataset(df, featureNames, labelName):
     
+      df_feature= df[featureNames]
+      df_label = df[[labelName]]
+      x_features = df_feature.values
+      y_labels = df_label.values
+      x_train, x_test, y_train, y_test = train_test_split(x_features, y_labels, test_size=0.33, random_state=7, stratify=y_labels)
+
+      return x_train, x_test, y_train, y_test
+  
+    
+def fitModel(model_name, model, X_train, y_train, X_test, y_test, verbose = True):
+    
+    model.fit(X_train, y_train)        
+    
+    print(f"{model_name}: Score (roc_auc) = {model.score(X_train, y_train)}, Best Parameters= {model.best_params_}")
+    
+    print(f"{model_name}: Test Score (roc_auc) = {model.score(X_test,y_test)} ")   
+    print(classification_report(y_true=y_test,y_pred=model.predict(X_test))) 
+    plot_confusion_matrix(model, X_test, y_test) 
+    plt.show() 
+
+
+def train_model(model_name, x_train, x_test, y_train, y_test, cross_fold):
+    
+     
+    if model_name == 'RF':
+            param_grid  = {'n_estimators': [2,4,8,16,32,64,128,256,400], 'criterion':["gini", "entropy"], 'random_state': [42]}
+            grid_er1 = GridSearchCV(estimator=ensemble.RandomForestClassifier(),param_grid =param_grid ,cv=cross_fold, scoring='roc_auc', n_jobs= -1)
+            fitModel(f"{model_name}", grid_er1, x_train, y_train, x_test, y_test)
+    elif model_name == 'AB':
+            param_grid  = {'n_estimators': [2,4,8,16,32,64,128,256,400], 'learning_rate':[0.001,0.01,0.1,0.2] ,  'random_state': [42]}
+            grid_er1 = GridSearchCV(estimator=ensemble.AdaBoostClassifier(),param_grid =param_grid ,cv=cross_fold, scoring='roc_auc', n_jobs= -1)
+            fitModel(f"{model_name}", grid_er1, x_train, y_train, x_test, y_test)
+    elif model_name == 'BC':
+            param_grid  = {'n_estimators': [2,4,8,16,32,64,128,256,400], 'random_state': [42]}
+            grid_er1 = GridSearchCV(estimator=ensemble.BaggingClassifier(),param_grid =param_grid ,cv=cross_fold, scoring='roc_auc', n_jobs= -1)
+            fitModel(f"{model_name}", grid_er1, x_train, y_train, x_test, y_test)
+ 
     
 if __name__ == '__main__':
     
@@ -430,21 +457,34 @@ if __name__ == '__main__':
         print('Dataset generation done')
         
         df = pd.DataFrame.from_records(data)
+        df = shuffle(df)
         print(df.head())
         
         df.to_csv('dataset.csv')
         print('Dataset write donne')
-    
 
-      
-      
-    featureNames = ['url_count', 'punctuation_count', 'day_period', 
-                    'text_similarity']
-    labelName = 'label'
-    classifier = Classifier(df, featureNames, labelName)
-    model = classifier.makeModel('RandomForestClassifier')
     
-    print(model)
+    featureNames = ['text_similarity', 'url_count', 'punctuation_count']
+    labelName = 'label'
+    
+    
+    model_names=['RF', 'AB', 'BC']
+    cross_fold=10
+    
+    for model_name in model_names:
+        
+        x_train, x_test, y_train, y_test = create_train_test_dataset(
+            df, featureNames, labelName)
+        
+        model=train_model(model_name, x_train, x_test, y_train, y_test, cross_fold)
+    
+    # classifier = Classifier(df, featureNames, labelName)
+    # model = classifier.makeModel()
+    
+    # classifier.printFeatureRankings()
+    # prinst(model)
+    
+    
     # threads=read_data(THREADS_FILENAME, THREADS_COL)
     # print(threads.shape)
     # print(len(threads['author_name'].unique()))
