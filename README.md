@@ -1,3 +1,4 @@
+# User Profile Matching Analysis across Heterogeneous Online Platforms
 # Main idea of the project
 <p align="justify">
 Given two user profiles from heterogeneous online platforms, how can we predict whether they belong to the same user? 
